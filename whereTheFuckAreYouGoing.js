@@ -11,7 +11,7 @@ function wtfayg(callback, options){
 		minimumView: 50,
 		scrollUp: 10,
 		scrollOnlyMobile: true,
-		limit: 5,
+		limit: 1,
 		scrollDelay: 500
 	};
 
@@ -49,17 +49,57 @@ function wtfayg(callback, options){
 		return false;
     }
 
+    this.saveData = function(value){
+    	if (typeof localStorage == 'undefined') {
+		    localStorage.setItem('wtfayg_called', value);
+		}else{
+		    var date = new Date();
+		    date.setTime(date.getTime()+(30*24*60*60*1000));
+	        var expires = '; expires='+date.toUTCString();
+		    document.cookie = 'wtfayg_called='+value+expires+'; path=/';
+		}
+
+		if(value >= this.options.limit){
+			this.disabled = true;
+		}
+    }
+
+    this.getData = function(){
+    	var data;
+
+    	if (typeof localStorage == 'undefined') {
+		    data = localStorage.getItem('wtfayg_called');
+    	}else{
+		    var l = document.cookie.split(';');
+		    for(var i=0;i < l.length;i++) {
+		        var c = l[i];
+		        while(c.charAt(0)==' ') c = c.substring(1,c.length);
+		        if (c.indexOf('wtfayg_called=') == 0){ 
+		        	data = c.substring(14,c.length);
+		        }
+		    }
+    	}
+
+    	if(data >= this.options.limit){
+			this.disabled = true;
+		}
+
+    	return (isNaN(data) || typeof data === 'undefined') ? 0 : data;
+    }
+
 	this.init = function(){
+		this.called = this.getData();
 		var that = this, t, scrollActive = false, lastScrollPosition = 0, isFirstScroll = true;
 
 		jQuery(window).on('mouseleave', function(e) {
-			if(that.called !== that.options.limit && !that.disabled && 
+			if(!that.disabled && 
 				(
 					e.clientY < 0 || e.clientY > jQuery(window).height() ||
 					e.clientX < 0 || e.clientX > jQuery(window).width()
 					)) {
 				that.callback();
 				that.called++;
+				that.saveData(that.called);
 			}
 		});
 
@@ -70,33 +110,34 @@ function wtfayg(callback, options){
 				t = setTimeout(function() {
 					that.disabled = false;
 				}, that.options.scrollDelay);
-			}
 
-			if((that.options.scrollOnlyMobile && that.isMobile()) || !that.options.scrollOnlyMobile){
-			    var scrollPosition = jQuery(window).scrollTop();
-			    var windowHeight = jQuery(window).height();
-			    var pageHeight = jQuery(document).height();
-			    var viewedPercent = parseInt((((parseFloat(scrollPosition) + parseFloat(windowHeight)) / parseFloat(pageHeight)) * 100).toFixed(0));
-			    var scrollUp = (pageHeight / 100) * that.options.scrollUp;
+				if((that.options.scrollOnlyMobile && that.isMobile()) || !that.options.scrollOnlyMobile){
+				    var scrollPosition = jQuery(window).scrollTop();
+				    var windowHeight = jQuery(window).height();
+				    var pageHeight = jQuery(document).height();
+				    var viewedPercent = parseInt((((parseFloat(scrollPosition) + parseFloat(windowHeight)) / parseFloat(pageHeight)) * 100).toFixed(0));
+				    var scrollUp = (pageHeight / 100) * that.options.scrollUp;
 
-			    if(!scrollActive){
-				    if(viewedPercent >= that.options.minimumView){
-				    	scrollActive = true;
+				    if(!scrollActive){
+					    if(viewedPercent >= that.options.minimumView){
+					    	scrollActive = true;
+					    }
+					}
+
+				    if(scrollActive || !isFirstScroll){
+				    	if((lastScrollPosition - scrollPosition) >= scrollUp){
+				    		that.callback();
+							that.called++;
+							that.saveData(that.called);
+				    	}
 				    }
-				}
 
-			    if(scrollActive || !isFirstScroll){
-			    	if((lastScrollPosition - scrollPosition) >= scrollUp){
-			    		that.callback();
-						that.called++;
-			    	}
-			    }
+				    lastScrollPosition = scrollPosition;
 
-			    lastScrollPosition = scrollPosition;
-
-			    if(isFirstScroll){
-					isFirstScroll = false;
-					lastScrollPosition = 0;
+				    if(isFirstScroll){
+						isFirstScroll = false;
+						lastScrollPosition = 0;
+					}
 				}
 			}
 
@@ -110,9 +151,10 @@ function wtfayg(callback, options){
 			window.history.pushState(null, window.title);
 
 			jQuery(window).bind('popstate', function(e){
-		        if (window.history.state && window.history.state.exitIntent) {
+		        if (!that.disabled && window.history.state && window.history.state.exitIntent) {
 					that.callback();
 					that.called++;
+					that.saveData(that.called);
 				}
 		    });
 		}else{
@@ -120,9 +162,10 @@ function wtfayg(callback, options){
 			root.location.hash = '';
 
 			jQuery(window).on('hashchange',function(){ 
-			    if (root.location.hash.substr(-2) === 'ei') {
+			    if (!that.disabled && root.location.hash.substr(-2) === 'ei') {
 					that.callback();
 					that.called++;
+					that.saveData(that.called);
 				}
 			});
 		}

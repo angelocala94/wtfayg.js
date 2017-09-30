@@ -32,7 +32,7 @@ var defaultOptions = {
     minimumView: 50,
     scrollUp: 10,
     scrollOnlyMobile: true,
-    limit: 5,
+    limit: 1,
     scrollDelay: 500
 };
 ```
