@@ -11,7 +11,6 @@ function wtfayg(callback, options){
 		minimumView: 50,
 		scrollUp: 10,
 		scrollOnlyMobile: true,
-		targetElement: '',
 		limit: 5,
 		scrollDelay: 500
 	};
